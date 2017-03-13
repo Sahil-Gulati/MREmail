@@ -1,0 +1,21 @@
+{
+    "name": "sahil-gulati/mr-email",
+    "description": "AWS SES raw email bulk sending.",
+    "authors": [
+        {
+            "name": "Sahil Gulati",
+            "email": "sahil.nona@gmail.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {
+       "php": ">=5.4",
+       "sahil-gulati/FCrawling":"1.0.0",
+       "phpmailer/phpmailer":"~5.2"
+    },
+    "autoload":{
+       "psr-0":{
+          "MREmail": "src/"
+       }
+    }
+}
