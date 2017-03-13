@@ -31,7 +31,7 @@ $senderName="Sahil Gulati";
 /**
  * Initiating object of SESEmail
  */
-$sesEmail = new SESEmail('test_function');
+$sesEmail = new SESEmail("callback_function","AWSKEYXXXX","AWSSECRET-XXXXXX","email.us-east-1.amazonaws.com");
 /**
  * Initiating object of SESEmail request 1
  */
@@ -84,7 +84,7 @@ $sesEmail->makeRequest(
  * Executing gathered request
  */
 $sesEmail->execute();
-function test_function($response,$requestNo,$parameters,$groupNo)
+function callback_function($response,$requestNo,$parameters,$groupNo)
 {
     print_r(func_get_args());
 }
