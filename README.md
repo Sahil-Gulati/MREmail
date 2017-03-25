@@ -1,7 +1,7 @@
 # MREmail
 AWS SES raw emails bulk sending. This library enables a user to gather multiple email requests and execute those requests in one go. Each email request can be altered with customized options available for generating raw email content.
 
-##Installation
+## Installation
 `composer require sahil-gulati/mr-email`
 
 **OR**
@@ -15,7 +15,7 @@ AWS SES raw emails bulk sending. This library enables a user to gather multiple 
 ```
 `composer install`
 
-##Usage
+## Usage
 ```php
 <?php
 
