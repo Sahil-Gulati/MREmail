@@ -1,5 +1,5 @@
 # MREmail
-AWS SES raw emails bulk sending. This library enables a user to gather multiple email requests and execute those requests in one go. Each email request can be altered with customized options available for generating raw email content.
+AWS SES(Simple Email Service) raw emails bulk sending. This library enables a user to gather multiple email requests and execute those requests in one go. Each email request can be altered with customized options available for generating raw email content.
 
 ## Installation
 `composer require sahil-gulati/mr-email`
@@ -9,13 +9,51 @@ AWS SES raw emails bulk sending. This library enables a user to gather multiple 
 ```javascript
 {
     "require":{
-        "sahil-gulati/mr-email": "1.0.0"
+        "sahil-gulati/mr-email": "2.0.0"
     }
 }
 ```
 `composer install`
 
-## Usage
+## Creating SES Email
+```php
+$sesEmail = new SESEmail("callback_function","AWSKEYXXXX","AWSSECRET-XXXXXX","us-east-1");
+```
+
+## Creating SES EmailRequest
+```php
+$sesRequestObj=new SESEmailRequest();
+$sesRequestObj
+    ->addReceiver($receiverEmail) 
+    ->addSenderEmail($receiverEmail)
+    ->addSenderName($senderName)
+    ->setContentType("application/json")  //Added in version 2.0.0
+    ->setEmailSubject("testing email1!")
+    ->setEmailBody("This is a email body")
+    ->makeContent();
+```
+
+## Adding SES EmailRequest
+```php
+/**
+ * Adding request in SESEmail
+ */
+$sesEmail->makeRequest($sesRequestObj);
+```
+
+## Execution
+```php
+/**
+ * Executing gathered request
+ */
+$sesEmail->execute();
+function callback_function($response,$requestNo,$parameters,$groupNo)
+{
+    print_r(func_get_args());
+}
+```
+
+## Complete example with all together
 ```php
 <?php
 
@@ -26,7 +64,7 @@ require_once 'vendor/autoload.php';
 use MREmail\SESEmail as SESEmail;
 use MREmail\SESEmailRequest as SESEmailRequest;
 
-$receiverEmail="sahil@getamplify.com";
+$receiverEmail="sahil.gulati1991@outlook.com";
 $senderName="Sahil Gulati";
 /**
  * Initiating object of SESEmail
@@ -48,6 +86,7 @@ $sesEmail->makeRequest(
             ->addReceiver($receiverEmail)
             ->addSenderEmail($receiverEmail)
             ->addSenderName($senderName)
+            ->setContentType("application/json")
             ->setEmailSubject("testing email1!")
             ->setEmailBody("This is a email body")
             ->makeContent()
