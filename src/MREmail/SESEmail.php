@@ -73,7 +73,7 @@ class SESEmail
         $fcrawlingRequest->setOption(array(
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => $sesRequestObject->getRequestBody(),
-            CURLOPT_HTTPHEADER => self::getHeaders("", $sesRequestObject->getRequestBody()),
+            CURLOPT_HTTPHEADER => self::getHeaders("", $sesRequestObject->getRequestBody(), $sesRequestObject),
             CURLOPT_SSL_VERIFYHOST => 2,
             CURLOPT_SSL_VERIFYPEER => 1,
             CURLOPT_FOLLOWLOCATION => true,
@@ -99,12 +99,13 @@ class SESEmail
         if(!empty($senderEmail))
         {
             $queryString = "";
-            $payload = $this->makeTestRequest($senderEmail);
+            $sesRequestObject = $this->makeTestRequest($senderEmail);
+            $payload = $sesRequestObject->getRequestBody();
             $channel=curl_init();
             curl_setopt($channel, CURLOPT_URL, sprintf(self::$sesEndpoint, self::$sesRegion));
             curl_setopt($channel, CURLOPT_POST, true);
             curl_setopt($channel, CURLOPT_POSTFIELDS,  $payload);
-            curl_setopt($channel, CURLOPT_HTTPHEADER, self::getHeaders($queryString, $payload));
+            curl_setopt($channel, CURLOPT_HTTPHEADER, self::getHeaders($queryString, $payload, $sesRequestObject));
             curl_setopt($channel, CURLOPT_SSL_VERIFYHOST, 2);
             curl_setopt($channel, CURLOPT_SSL_VERIFYPEER, 1);
             curl_setopt($channel, CURLOPT_FOLLOWLOCATION, true);
@@ -118,7 +119,7 @@ class SESEmail
      * @return Array This function will return an array of headers.
      * @link http://docs.aws.amazon.com/amazonswf/latest/developerguide/UsingJSON-swf.html Url definiting pattern required for authorization.
      */
-    private static function getHeaders($queryString, $payload)
+    private static function getHeaders($queryString, $payload, $sesRequestObject)
     {
         $dateStamp = gmdate("Ymd");
         $timestamp = gmdate("Ymd\THis\Z");
@@ -130,7 +131,7 @@ class SESEmail
         $stringToSign = self::getStringToSign($timestamp, $credentialScope, $canonicalRequest);
         $signature = self::getSignature($stringToSign, $signingKey);
         array_unshift($headers, sprintf("Authorization: %s Credential=%s/%s, SignedHeaders=host;x-amz-date, Signature=%s", self::$awsHashAlgorithmTag, self::$accessKey, $credentialScope, $signature));
-        array_unshift($headers, "Accept: application/json");
+        array_unshift($headers, sprintf("Accept: %s", $sesRequestObject->getContentType()));
         return $headers;
     }
     private static function getSignature($stringToSign, $signingKey) {
@@ -198,11 +199,12 @@ class SESEmail
                 ->addSenderEmail($senderEmail)
                 ->addReceiver($senderEmail)
                 ->addSenderName("Sahil Gulati")
+                ->setContentType("application/json")
                 ->setEmailSubject("Testing email!")
                 ->setEmailBody("Hello World")
                 ->addCustomHeader("X-Developer-email", "sahil.gulati1991@outlook.com")
                 ->addCustomHeader("X-Developer-Id", "github/sahil-gulati")
-                ->makeContent(true);
+                ->makeContent();
     }
     
 }
@@ -215,6 +217,10 @@ class SESEmailRequest
      * @var String It will contain encoded email content.
      */
     protected $content="";
+    /**
+     * @var String It will set Accept header of the ses HTTP request.
+     */
+    protected $contentType="application/json";
     /**
      * @var String It will contain email body.
      */
@@ -301,6 +307,19 @@ class SESEmailRequest
         return $this;
     }
     /**
+     * This function will set contentType of the Accept header.
+     * @param String $contentType ContentType of the AWS response.
+     * @return \MREmail\SESEmailRequest
+     */
+    public function setContentType($contentType)
+    {
+        if(!empty($contentType))
+        {
+            $this->contentType = $contentType;
+        }
+        return $this;
+    }
+    /**
      * This function will set email body.
      * @param String $body Body of the email.
      * @param Boolean $isHtml For setting whether email body is in HTML format or not.
@@ -335,6 +354,14 @@ class SESEmailRequest
     public function getRequestBody()
     {
         return $this->content;
+    }
+    /**
+     * This will return AWS content type.
+     * @return String ContentType for accept header.
+     */
+    public function getContentType()
+    {
+        return $this->contentType;
     }
     /**
      * This function is responsible for generation encoded string which will be sent to AWS for sending email.
