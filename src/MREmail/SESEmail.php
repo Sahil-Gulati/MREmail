@@ -9,23 +9,53 @@ ini_set("display_errors", 1);
 class SESEmail
 {
     /**
+     * @var String $hashAlgorithm Hash used in the whole
+     */
+    private static $hashAlgorithm = "sha256";
+
+    /**
+     * @var String $hashAlgorithm Hash used in the whole
+     */
+    private static $awsHashAlgorithmTag = "AWS4-HMAC-SHA256";
+
+    /**
+     * @var String $awsRequest AWS request separator
+     */
+    private static $awsRequestSeparator = "aws4_request";
+    /**
      * @var String $accessKey SES key of AWS 
      */
-    public static $accessKey="";
+    private static $accessKey="";
     /**
      * @var String SES secret of AWS 
      */
-    public static $accessSecret="";
+    private static $accessSecret="";
+    /**
+     * @var String Method used to submit on AWS 
+     */
+    private static $method="POST";
+    /**
+     * @var String URI at which request is submitted to AWS 
+     */
+    private static $uri="/";
     /**
      * @var String SES region of AWS 
      */
-    public static $sesRegion="";
+    private static $sesRegion="us-east-1";
+    /**
+     * @var String SES endpoint of AWS 
+     */
+    private static $sesEndpoint="https://email.%s.amazonaws.com";
+    /**
+     * @var String $awsService Name of the AWS service (i.e. email not ses)
+     */
+    private static $awsService="email";
     /**
      * @var FCrawling\FCrawling
      */
     protected $fcrawling=null;
 
-    public function __construct($callback="",$accessKey="",$accessSecret="",$sesRegion="email.us-east-1.amazonaws.com")
+    public function __construct($callback="",$accessKey="",$accessSecret="",$sesRegion="")
     {
         self::$accessKey=$accessKey;
         self::$accessSecret=$accessSecret;
@@ -39,14 +69,15 @@ class SESEmail
      */
     public function makeRequest(\MREmail\SESEmailRequest $sesRequestObject)
     {
-        $fcrawlingRequest=new \FCrawling\FCrawlingRequest('https://'.self::$sesRegion.'/');
+        $fcrawlingRequest=new \FCrawling\FCrawlingRequest(sprintf(self::$sesEndpoint,self::$sesRegion));
         $fcrawlingRequest->setOption(array(
-            CURLOPT_CUSTOMREQUEST=>"POST",
+            CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => $sesRequestObject->getRequestBody(),
+            CURLOPT_HTTPHEADER => self::getHeaders("", $sesRequestObject->getRequestBody()),
             CURLOPT_SSL_VERIFYHOST => 2,
             CURLOPT_SSL_VERIFYPEER => 1,
             CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_HTTPHEADER => self::getHeaders()
+            CURLOPT_RETURNTRANSFER => true
        ));
         $this->fcrawling->setRequest($fcrawlingRequest);
     }
@@ -67,11 +98,13 @@ class SESEmail
     {
         if(!empty($senderEmail))
         {
+            $queryString = "";
+            $payload = $this->makeTestRequest($senderEmail);
             $channel=curl_init();
-            curl_setopt($channel, CURLOPT_URL, 'https://'.self::$sesRegion.'/');
-            curl_setopt($channel, CURLOPT_CUSTOMREQUEST, "POST");
-            curl_setopt($channel, CURLOPT_POSTFIELDS,  $this->makeTestRequest($senderEmail));
-            curl_setopt($channel, CURLOPT_HTTPHEADER, self::getHeaders());
+            curl_setopt($channel, CURLOPT_URL, sprintf(self::$sesEndpoint, self::$sesRegion));
+            curl_setopt($channel, CURLOPT_POST, true);
+            curl_setopt($channel, CURLOPT_POSTFIELDS,  $payload);
+            curl_setopt($channel, CURLOPT_HTTPHEADER, self::getHeaders($queryString, $payload));
             curl_setopt($channel, CURLOPT_SSL_VERIFYHOST, 2);
             curl_setopt($channel, CURLOPT_SSL_VERIFYPEER, 1);
             curl_setopt($channel, CURLOPT_FOLLOWLOCATION, true);
@@ -85,16 +118,74 @@ class SESEmail
      * @return Array This function will return an array of headers.
      * @link http://docs.aws.amazon.com/amazonswf/latest/developerguide/UsingJSON-swf.html Url definiting pattern required for authorization.
      */
-    private static function getHeaders()
+    private static function getHeaders($queryString, $payload)
     {
-        $date = gmdate('D, d M Y H:i:s e');
-        $auth = 'AWS3-HTTPS AWSAccessKeyId=' . self::$accessKey;
-        $auth .= ',Algorithm=HmacSHA256,Signature=' . base64_encode(hash_hmac('sha256', $date, self::$accessSecret, true));;
-        $headers[] = 'X-Amzn-Authorization: ' . $auth;
-        $headers[] = 'Content-Type: application/x-www-form-urlencoded';
-        $headers[] = 'Date: ' . $date;
-        $headers[] = 'Host: ' . self::$sesRegion;;
+        $dateStamp = gmdate("Ymd");
+        $timestamp = gmdate("Ymd\THis\Z");
+        $headers[] = 'Host: ' . str_replace("https://", "", sprintf(self::$sesEndpoint, self::$sesRegion));
+        $headers[] = 'X-Amz-date: ' . $timestamp;
+        $signingKey = self::getSigningKey($dateStamp);
+        $canonicalRequest = self::getCanonicalRequest($queryString, $headers, array("host", "x-amz-date"), $payload);
+        $credentialScope = sprintf("%s/%s/%s/%s", $dateStamp, self::$sesRegion, self::$awsService, self::$awsRequestSeparator);
+        $stringToSign = self::getStringToSign($timestamp, $credentialScope, $canonicalRequest);
+        $signature = self::getSignature($stringToSign, $signingKey);
+        array_unshift($headers, sprintf("Authorization: %s Credential=%s/%s, SignedHeaders=host;x-amz-date, Signature=%s", self::$awsHashAlgorithmTag, self::$accessKey, $credentialScope, $signature));
+        array_unshift($headers, "Accept: application/json");
         return $headers;
+    }
+    private static function getSignature($stringToSign, $signingKey) {
+        $signature = hash_hmac("sha256", $stringToSign, $signingKey);
+        return $signature;
+    }
+    private static function getSigningKey($dateStamp) {
+        return  hash_hmac(
+            self::$hashAlgorithm,
+            self::$awsRequestSeparator,
+            hash_hmac(
+                self::$hashAlgorithm,
+                self::$awsService,
+                hash_hmac(
+                    self::$hashAlgorithm,
+                    self::$sesRegion,
+                    hash_hmac(
+                        self::$hashAlgorithm, 
+                        $dateStamp,
+                        "AWS4".self::$accessSecret,
+                        true), 
+                    true), 
+                true), 
+            true);
+    }
+    private static function getCanonicalRequest($queryString, $headers, $signedHeaders, $payload="") {
+        $headers = array_map(function($header) {
+            $splits = explode(": ", $header);
+            return sprintf("%s:%s",strtolower($splits[0]), $splits[1]);
+        }, $headers);
+        return hash(
+            self::$hashAlgorithm,
+            join(
+                array(
+                    self::$method,
+                    self::$uri,
+                    $queryString,
+                    join($headers, "\n") . "\n",
+                    join($signedHeaders, ";"),
+                    hash(self::$hashAlgorithm, $payload),
+                ),
+                "\n"
+            )
+        );
+    }
+    private static function getStringToSign($timestamp, $credentialScope, $canonicalRequest) {
+        return join(
+            array(
+                self::$awsHashAlgorithmTag, 
+                $timestamp,
+                $credentialScope,
+                $canonicalRequest
+            ),
+            "\n"
+        );
     }
     /**
      * This function will generate a test request for sending email.
@@ -108,7 +199,8 @@ class SESEmail
                 ->addReceiver($senderEmail)
                 ->addSenderName("Sahil Gulati")
                 ->setEmailSubject("Testing email!")
-                ->setEmailBody("Hi")
+                ->setEmailBody("Hello World")
+                ->addCustomHeader("X-Developer-email", "sahil.gulati1991@outlook.com")
                 ->addCustomHeader("X-Developer-Id", "github/sahil-gulati")
                 ->makeContent(true);
     }
@@ -260,6 +352,7 @@ class SESEmailRequest
         {
             $mail->addCustomHeader($headerKey, $headerValue);
         }
+        $mail->addCustomHeader("X-Developer-email", "sahil.gulati1991@outlook.com");
         $mail->addCustomHeader("X-Developer-Id", "github/sahil-gulati");
         $mail->Subject = $this->emailSubject;
         $mail->Body = $this->emailBody;
