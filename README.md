@@ -97,7 +97,7 @@ $senderName="Sahil Gulati";
  * (Array) array => 0 (Object) $classObject array => 1 (String) function_name(public) 
  * (Array) array => 0 (String) class_name array => 1 (String) function_name(public static) 
  */
-$sesEmail = new SESEmail("callback_function","AWSKEYXXXX","AWSSECRET-XXXXXX","email.us-east-1.amazonaws.com");
+$sesEmail = new SESEmail("callback_function","AWSKEYXXXX","AWSSECRET-XXXXXX","us-east-1");
 /**
  * Initiating object of SESEmail request 1
  */
