@@ -25,7 +25,7 @@ $sesEmail = new SESEmail("callback_function","AWSKEYXXXX","AWSSECRET-XXXXXX","us
 $sesRequestObj=new SESEmailRequest();
 $sesRequestObj
     ->addReceiver($receiverEmail) 
-    ->addSenderEmail($receiverEmail)
+    ->addSenderEmail($senderEmail)
     ->addSenderName($senderName)
     ->setContentType("application/json")  //Added in version 2.0.0
     ->setEmailSubject("testing email1!")
@@ -52,6 +52,26 @@ function callback_function($response,$requestNo,$parameters,$groupNo)
     print_r(func_get_args());
 }
 ```
+### Running test
+```php
+<?php
+
+require_once 'vendor/autoload.php';
+/**
+ * Using namespace of MREmail
+ */
+use MREmail\SESEmail as SESEmail;
+use MREmail\SESEmailRequest as SESEmailRequest;
+
+$receiverEmail="sahil.gulati1991@outlook.com";
+$senderEmail="someemail@gmail.com";
+$senderName="Sahil Gulati";
+/**
+ * Note: While sending test email $senderEmail must be equal to $receiverEmail.
+ */
+$sesEmail = new SESEmail("callback_function","AWSKEYXXXX","AWSSECRET-XXXXXX","us-east-1");
+$sesEmail->sendTestEmail($senderEmail);
+```
 
 ## Complete example with all together
 ```php
@@ -65,6 +85,7 @@ use MREmail\SESEmail as SESEmail;
 use MREmail\SESEmailRequest as SESEmailRequest;
 
 $receiverEmail="sahil.gulati1991@outlook.com";
+$senderEmail="someemail@gmail.com";
 $senderName="Sahil Gulati";
 /**
  * Initiating object of SESEmail
@@ -84,7 +105,7 @@ $sesRequestObj=new SESEmailRequest();
 $sesEmail->makeRequest(
             $sesRequestObj
             ->addReceiver($receiverEmail)
-            ->addSenderEmail($receiverEmail)
+            ->addSenderEmail($senderEmail)
             ->addSenderName($senderName)
             ->setContentType("application/json")
             ->setEmailSubject("testing email1!")
@@ -101,7 +122,7 @@ $sesRequestObj=new SESEmailRequest();
 $sesEmail->makeRequest(
             $sesRequestObj
             ->addReceiver($receiverEmail)
-            ->addSenderEmail($receiverEmail)
+            ->addSenderEmail($senderEmail)
             ->addSenderName($senderName)
             ->setEmailSubject("testing email2!")
             ->setEmailBody("This is a email body")
@@ -117,7 +138,7 @@ $sesRequestObj=new SESEmailRequest();
 $sesEmail->makeRequest(
             $sesRequestObj
             ->addReceiver($receiverEmail)
-            ->addSenderEmail($receiverEmail)
+            ->addSenderEmail($senderEmail)
             ->addSenderName($senderName)
             ->setEmailSubject("testing email3!")
             ->setEmailBody("This is a email body")
