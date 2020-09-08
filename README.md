@@ -15,6 +15,10 @@ AWS SES(Simple Email Service) raw emails bulk sending. This library enables a us
 ```
 `composer install`
 
+> Note:<br> 
+> AWS V3 signature is supported in version `1.0.0`.<br>
+> AWS V4 signature is supported in version `2.0.0`.
+
 ## Creating SES Email
 ```php
 $sesEmail = new SESEmail("callback_function","AWSKEYXXXX","AWSSECRET-XXXXXX","us-east-1");
@@ -54,7 +58,6 @@ function callback_function($response,$requestNo,$parameters,$groupNo)
 ```
 ### Running test
 ```php
-<?php
 
 require_once 'vendor/autoload.php';
 /**
