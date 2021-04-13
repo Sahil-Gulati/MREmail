@@ -11,7 +11,7 @@ use MREmail\SESEmailRequest as SESEmailRequest;
 
 $receiverEmail="sahil@getamplify.com";
 $senderName="Sahil Gulati";
-$sesEmail = new SESEmail('test_function',"AWSKEYXXXX","AWSSECRETXXXX","email.us-east-1.amazonaws.com");
+$sesEmail = new SESEmail('test_function',"AWSKEYXXXX","AWSSECRETXXXX","us-east-1");
 $sesEmail->makeRequest(
             (new SESEmailRequest())
             ->addReceiver($receiverEmail)
